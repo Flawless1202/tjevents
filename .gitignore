@@ -1,0 +1,7 @@
+/build
+/dist
+/.idea
+/data
+/*.egg-info
+__pycache__
+*/__pycache__
