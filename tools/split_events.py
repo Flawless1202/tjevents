@@ -46,7 +46,7 @@ for subtype in os.listdir(origin_root):
 
         count += 1
 
-        if len(event_save) == 60:
+        if len(event_save) == 10:
             with open(os.path.join(root, "split_events", "{}_{}.pkl".format(subtype, count)), "wb") as f:
                 pkl.dump(event_save, f)
             with open(os.path.join(root, "split_images", "{}_{}.pkl".format(subtype, count)), "wb") as f:
