@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
 
-from .base import BaseModel
 from .unet import FireUNet
 
 
-class FireNet(BaseModel):
+class FireNet(nn.Module):
 
     def __init__(self, args):
         super(FireNet, self).__init__(args)

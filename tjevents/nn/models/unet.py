@@ -130,6 +130,3 @@ class FireUNet(nn.Module):
 
         img = self.pred(x)
         return img, states
-
-
-
