@@ -23,7 +23,7 @@ def make_events_preview(events, mode="red-blue", num_bins_to_show=-1):
 def show_results(events, rec_img):
     events_preview = make_events_preview(events)
     img_is_color = (len(rec_img.shape) == 3)
-    preview_is_color = (len(rec_img.shape) == 3)
+    preview_is_color = (len(events_preview.shape) == 3)
 
     if (preview_is_color and not img_is_color):
         rec_img = np.dstack([rec_img] * 3)
@@ -33,4 +33,4 @@ def show_results(events, rec_img):
     img = np.hstack([events_preview, rec_img])
 
     cv2.imshow("results", img)
-    cv2.waitKey(1)
+    cv2.waitKey()

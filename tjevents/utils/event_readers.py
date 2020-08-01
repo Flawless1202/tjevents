@@ -1,8 +1,6 @@
 import pandas as pd
 import numpy as np
 
-from .timers import CpuTimer
-
 
 class FixedSizeEventReader(object):
 
@@ -28,11 +26,10 @@ class FixedSizeEventReader(object):
         return cluster_length if self.drop_last or event_length % self.num_events == 0 else cluster_length + 1
 
     def __next__(self):
-        with CpuTimer("Read events using fixed size event windows"):
-            event_window = self._iter.__next__().values
-            if (len(event_window) == 0) or (len(event_window) < self.num_events and self.drop_last):
-                raise StopIteration()
-            return event_window
+        event_window = self._iter.__next__().values
+        if (len(event_window) == 0) or (len(event_window) < self.num_events and self.drop_last):
+            raise StopIteration()
+        return event_window
 
 
 class FixedDurationEventReader(object):
@@ -61,10 +58,9 @@ class FixedDurationEventReader(object):
         return cluster_length if self.drop_last else cluster_length + 1
 
     def __next__(self):
-        with CpuTimer("Read events using fixed duration event windows"):
-            end_stamp = self.last_stamp + self.duration_s
-            event_window = self.events[(self.events[:, 0] >= self.last_stamp) * (self.events[:, 0] < end_stamp)]
-            if (len(event_window) == 0) or (end_stamp > self.events[-1, 0] and self.drop_last):
-                raise StopIteration()
-            self.last_stamp = end_stamp
-            return event_window
+        end_stamp = self.last_stamp + self.duration_s
+        event_window = self.events[(self.events[:, 0] >= self.last_stamp) * (self.events[:, 0] < end_stamp)]
+        if (len(event_window) == 0) or (end_stamp > self.events[-1, 0] and self.drop_last):
+            raise StopIteration()
+        self.last_stamp = end_stamp
+        return event_window
