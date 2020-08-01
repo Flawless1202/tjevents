@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .modules import ConvLayers, UpsampleConvLayers, ConvTransposedLayers, RecurrentConvLayers, ResidualBlock, \
-    RecurrentResidualBlock
+from tjevents.nn.conv import ConvLayers, UpsampleConvLayers, ConvTransposedLayers, ResidualBlock
+from tjevents.nn.recurrent import RecurrentConvLayers, RecurrentResidualBlock
 
 
 class BaseUNet(nn.Module):
