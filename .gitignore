@@ -3,5 +3,6 @@
 /.idea
 /data
 /*.egg-info
-__pycache__
 */__pycache__
+/work_dirs
+*.bak
