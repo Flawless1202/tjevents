@@ -4,7 +4,6 @@ from easydict import EasyDict
 import pickle as pkl
 
 import torch
-import numpy as np
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose, ToTensor
 
@@ -23,12 +22,12 @@ class EventDataset(Dataset):
         self.events_trans = Compose([
             Event2Voxel(self.args.num_bins, self.args.width, self.args.height),
             VoxelPreprocess(self.args.if_normalize, self.args.flip),
-            Pad(12)
+            # Pad(12)
         ])
 
         self.img_trans = Compose([
             ImageNormal(),
-            Pad(12)
+            # Pad(12)
         ])
 
     def __len__(self):
