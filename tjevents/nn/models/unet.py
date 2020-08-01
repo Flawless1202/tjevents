@@ -82,6 +82,54 @@ class RecurrentUNet(BaseUNet):
         return img, states
 
 
+class FireUNet(nn.Module):
+
+    def __init__(self, args):
+        super(FireUNet, self).__init__()
+
+        self.args = EasyDict(args)
+
+        self.head = RecurrentConvLayers(self.args.in_channels, self.args.base_channels, kernel_size=3, padding=1,
+                                        rnn_type=self.args.rnn_type, norm=self.args.norm)
+        self.num_rnn_units = 1
+        self.res_blocks = nn.ModuleList()
+        rnn_indices = self.args.rnn_blocks["resblock"]
+        for i in range(self.args.num_res_blocks):
+            if i in rnn_indices or -1 in rnn_indices:
+                self.res_blocks.append(RecurrentResidualBlock(self.args.base_channels, self.args.base_channels,
+                                                              rnn_type=self.args.rnn_type, norm=self.args.norm))
+                self.num_rnn_units += 1
+            else:
+                self.res_blocks.append(ResidualBlock(self.args.base_channels, self.args.base_channels,
+                                                     norm=self.args.norm))
+
+        self.pred = nn.Conv2d(
+            2 * self.args.base_channels if self.args.skip_type == 'concat' else self.args.base_channels,
+            self.args.out_channels, kernel_size=1, padding=0)
+
+    def forward(self, x, pre_states):
+
+        if pre_states is None:
+            pre_states = [None] * (self.num_rnn_units)
+
+        states = []
+        state_idx = 0
+
+        x, state = self.head(x, pre_states[state_idx])
+        state_idx += 1
+        states.append(state)
+
+        rnn_indices = self.args.rnn_blocks["resblock"]
+        for i, res_block in enumerate(self.res_blocks):
+            if i in rnn_indices or -1 in rnn_indices:
+                x, state = res_block(x, pre_states[state_idx])
+                state_idx += 1
+                states.append(state)
+            else:
+                x = res_block(x)
+
+        img = self.pred(x)
+        return img, states
 
 
 
