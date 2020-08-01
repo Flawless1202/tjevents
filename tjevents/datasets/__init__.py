@@ -1,5 +1,4 @@
-from .event_representations import Event2Voxel
-from .transforms import VoxelPreprocess
-from .event_dataset import EventDataset
+from .event_image import EventImageDataset
+from .event2graph import E2GDataset
 
-__all__ = ["Event2Voxel", "VoxelPreprocess", "EventDataset"]
+__all__ = ["EventImageDataset", "E2GDataset"]

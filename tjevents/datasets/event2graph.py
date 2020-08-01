@@ -7,7 +7,7 @@ import torch
 from torch_geometric.data import Dataset, Data
 from torch_geometric.nn import radius_graph
 
-from tjevents.datasets import GridSampling
+from tjevents.transforms import GridSampling
 
 
 class E2GDataset(Dataset):
