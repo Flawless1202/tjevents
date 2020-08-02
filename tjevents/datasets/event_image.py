@@ -1,6 +1,5 @@
 import os
 import glob
-from easydict import EasyDict
 import pickle as pkl
 
 import torch
@@ -30,7 +29,6 @@ class EventImageDataset(Dataset):
     def __init__(self, root, event_transform=None, img_transform=None):
         super(EventImageDataset, self).__init__()
 
-        self.args = EasyDict(args)
         self.all_event_files = glob.glob(os.path.join(root, "event", "*"))
 
         # self.events_trans = Compose([
