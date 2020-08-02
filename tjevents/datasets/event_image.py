@@ -46,7 +46,13 @@ class EventImageDataset(Dataset):
         with open(img_file, "rb") as f:
             imgs = torch.cat([torch.as_tensor(img).unsqueeze(0) for img in pkl.load(f)], dim=0)
 
-        return self.event_transform(event), self.img_transform(imgs)
+        if self.event_transform is not None:
+            event = self.event_transform(event)
+
+        if self.img_transform is not None:
+            imgs = self.img_transform(imgs)
+
+        return event, imgs
 
     @staticmethod
     def _get_img_by_event(event_file):
