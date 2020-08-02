@@ -11,6 +11,10 @@ from tjevents.transforms import GridSampling
 
 
 class E2GDataset(Dataset):
+    """ The Event to Graph dataset used in `"Graph-Based Object Classification for Neuromorphic Vision Sensing"
+    <https://openaccess.thecvf.com/content_ICCV_2019/html/Bi_Graph-Based_Object_Classification_for_Neuromorphic_
+    Vision_Sensing_ICCV_2019_paper.html>`_paper. GridSampling is used to downsampling the events.
+    """
 
     def __init__(self, root, transform=None, pre_transform=None):
         super(E2GDataset, self).__init__(root, transform, pre_transform)
