@@ -50,7 +50,7 @@ class LightningDGCNN(pl.LightningModule):
         avg_acc = torch.stack([x["val_corrects"] for x in outputs]).sum().float() / \
                   len(outputs) * self.dataset_args.batch_size
         logs = {"val_loss": avg_loss, "val_accuracy": avg_acc}
-        print(avg_acc)
+
         return {"avg_val_loss": avg_loss, "log": logs}
 
     def prepare_data(self):
