@@ -1,0 +1,18 @@
+name: "dgcnn"
+version: 0.1
+model:
+  out_channels: 27
+  k: 8
+  aggr: "max"
+dataset:
+  data_root: "data/NVS2Graph"
+  batch_size: 64
+  shuffle: True
+train:
+  train_val_split: 0.1
+  lr: 0.001
+  num_gpus: 1
+  max_epochs: 50
+checkpoint_path: "work_dirs/e2g/checkpoints"
+resume_from_checkpoint: "work_dirs/e2g/_ckpt_epoch_4.ckpt"
+log_path: "work_dirs/e2g/logs"
