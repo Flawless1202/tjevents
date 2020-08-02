@@ -26,22 +26,12 @@ class EventImageDataset(Dataset):
             └── image/
     """
 
-    def __init__(self, root, event_transform=None, img_transform=None):
+    def __init__(self, root, phase, event_transform=None, img_transform=None):
         super(EventImageDataset, self).__init__()
 
-        self.all_event_files = glob.glob(os.path.join(root, "event", "*"))
+        self.all_event_files = glob.glob(os.path.join(root, "events", phase,  "*"))
 
-        # self.events_trans = Compose([
-        #     Event2Voxel(self.args.num_bins, self.args.width, self.args.height),
-        #     VoxelPreprocess(self.args.if_normalize, self.args.flip),
-        #     # Pad(12)
-        # ])
         self.event_transform = event_transform
-
-        # self.img_trans = Compose([
-        #     ImageNormal(),
-        #     # Pad(12)
-        # ])
         self.img_transform = img_transform
 
     def __len__(self):
@@ -60,4 +50,4 @@ class EventImageDataset(Dataset):
 
     @staticmethod
     def _get_img_by_event(event_file):
-        return event_file.replace("events", "image")
+        return event_file.replace("events", "images")
