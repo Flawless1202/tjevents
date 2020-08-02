@@ -11,9 +11,10 @@ from tjevents.datasets import Event2Voxel, VoxelPreprocess
 from tjevents.utils import show_results, FixedDurationEventReader
 
 
-root = "data/event_camera/dynamic_6dof"
-events_file = os.path.join(root, "events.txt")
-image_list_file = os.path.join(root, "images.txt")
+root = "data/event_camera/"
+subtype = "dynamic_6dof"
+events_file = os.path.join(root, "origin", subtype, "events.txt")
+image_list_file = os.path.join(root, "slomo", subtype, "images.txt")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 image_list = pd.read_csv(image_list_file, delim_whitespace=True, header=None,
@@ -23,12 +24,12 @@ image_list = pd.read_csv(image_list_file, delim_whitespace=True, header=None,
                          nrows=None, memory_map=True).values
 
 event_reader = FixedDurationEventReader(events_file)
-transforms = Compose([Event2Voxel(5, 240, 180, device),
-                      VoxelPreprocess(True, False, device)])
+transforms = Compose([Event2Voxel(5, 240, 180),
+                      VoxelPreprocess(True, False)])
 
 for event in event_reader:
-    mean_time_stamp = (event[-1, 0] + event[0, 0]) / 2
-    img_idx = np.argmin(np.abs(image_list[:, 0] - mean_time_stamp), axis=0)
-    voxel = transforms(event).unsqueeze(0)
-    img = cv2.imread(os.path.join(root, image_list[img_idx, 1]))
+    # mean_time_stamp = (event[-1, 0] + event[0, 0]) / 2
+    img_idx = np.argmin(np.abs(image_list[:, 0] - event[-1, 0]), axis=0)
+    voxel = transforms([event])
+    img = cv2.imread(os.path.join(root, "slomo", subtype, image_list[img_idx, 1]))
     show_results(voxel, img)
