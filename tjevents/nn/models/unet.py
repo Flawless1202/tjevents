@@ -1,11 +1,10 @@
-from easydict import EasyDict
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from tjevents.nn.conv import ConvLayers, UpsampleConvLayers, ConvTransposedLayers, ResidualBlock
 from tjevents.nn.recurrent import RecurrentConvLayers, RecurrentResidualBlock
+from tjevents.utils.types import as_easy_dict
 
 
 class BaseUNet(nn.Module):
@@ -13,7 +12,7 @@ class BaseUNet(nn.Module):
     def __init__(self, args):
         super(BaseUNet, self).__init__()
 
-        self.args = EasyDict(args)
+        self.args = as_easy_dict(args)
 
         skip_sum = lambda x1, x2: x1 + x2
         skip_concat = lambda x1, x2: torch.cat([x1, x2], dim=1)
@@ -48,7 +47,7 @@ class RecurrentUNet(BaseUNet):
     def __init__(self, args):
         super(RecurrentUNet, self).__init__(args)
 
-        self.args = EasyDict(args)
+        self.args = as_easy_dict(args)
 
         self.head = ConvLayers(self.args.in_channels, self.args.base_channels, kernel_size=5, stride=1, padding=2)
         self.encoders = nn.Sequential(
@@ -87,7 +86,7 @@ class FireUNet(nn.Module):
     def __init__(self, args):
         super(FireUNet, self).__init__()
 
-        self.args = EasyDict(args)
+        self.args = as_easy_dict(args)
 
         self.head = RecurrentConvLayers(self.args.in_channels, self.args.base_channels, kernel_size=3, padding=1,
                                         rnn_type=self.args.rnn_type, norm=self.args.norm)

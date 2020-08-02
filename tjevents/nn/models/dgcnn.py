@@ -3,20 +3,23 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from torch_geometric.nn import DynamicEdgeConv, global_max_pool
+from tjevents.utils.types import as_easy_dict
 
 
 class DGCNN(nn.Module):
 
-    def __init__(self, out_channels, k=8, aggr="max"):
+    def __init__(self, args):
         super(DGCNN, self).__init__()
 
-        self.conv1 = DynamicEdgeConv(self._MLP([2 * 4, 64]), k, aggr)
-        self.conv2 = DynamicEdgeConv(self._MLP([2 * 64, 128]), k, aggr)
+        self.args = as_easy_dict(args)
+
+        self.conv1 = DynamicEdgeConv(self._MLP([2 * 4, 64]), self.args.k, self.args.aggr)
+        self.conv2 = DynamicEdgeConv(self._MLP([2 * 64, 128]), self.args.k, self.args.aggr)
         self.fc = self._MLP(([128 + 64, 256]))
         self.out = nn.Sequential(
             self._MLP([256, 128]), nn.Dropout(0.5),
             self._MLP([128, 64]), nn.Dropout(0.5),
-            nn.Linear(64, out_channels)
+            nn.Linear(64, self.args.out_channels)
         )
 
     def forward(self, data):
