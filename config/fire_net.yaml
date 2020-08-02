@@ -1,11 +1,6 @@
-data:
-  events_dir: "data/event_camera/split_events"
-  num_bins: 5
-  width: 240
-  height: 180
-  if_normalize: True
-  flip: False
-unet:
+name: "fire_net"
+version: 0.1
+model:
   in_channels: 5
   out_channels: 1
   skip_type: "no_skip"
@@ -16,12 +11,22 @@ unet:
   rnn_type: "ConvGRU"
   rnn_blocks:
     resblock: [0]
+dataset:
+  data_root: "data/event_camera"
+  num_bins: 5
+  width: 240
+  height: 180
+  size_divisor: 32
+  if_normalize: True
+  flip: False
 train:
-  cuda: True
-  epochs: 75
-  batch_size: 2
+  num_gpus: 1
+  max_epochs: 20
+  batch_size: 1
+  batch_size_times: 4
+  shuffle: True
+  num_workers: 4
   lr: 0.0005
-test:
-  cuda: True
-  checkpoint: "work_dir/fire_net/epoch_17.pth"
-work_dir: "work_dir/fire_net"
+checkpoint_path: "work_dirs/fire_net/checkpoints"
+resume_from_checkpoint:
+log_path: "work_dirs/fire_net/logs"
