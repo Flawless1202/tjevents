@@ -11,7 +11,7 @@ from torch_geometric.nn.pool.consecutive import consecutive_cluster
 
 class Pad(object):
 
-    def __init__(self, width, height, size_divisor=16):
+    def __init__(self, width, height, size_divisor=32):
         padded_height = self._get_padded_size(height, size_divisor)
         padded_width = self._get_padded_size(width, size_divisor)
         
@@ -20,7 +20,7 @@ class Pad(object):
         padding_left = ceil((padded_width - width))
         padding_right = padded_width - padding_left
 
-        self.pad = nn.ReflectionPad2d((padding_left, padding_right, padding_top, padding_bottom))
+        self.pad = nn.ConstantPad2d((padding_left, padding_right, padding_top, padding_bottom), 0)
 
     def __call__(self, x):
         return self.pad(x)
@@ -48,9 +48,6 @@ class Event2VoxelGrid(object):
         self.height = height
 
     def __call__(self, events):
-        # with self.Timer("Events -> Device {}".format(self.device.type)):
-        #     events_tensor = events_tensor.to(self.device)
-
         voxel = [self._event2voxel_grid_single(torch.as_tensor(event)).unsqueeze(0) for event in events]
 
         return torch.cat(voxel, dim=0)
