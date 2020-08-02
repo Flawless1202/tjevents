@@ -7,7 +7,7 @@ import torch
 from torch_geometric.data import Dataset, Data
 from torch_geometric.nn import radius_graph
 
-from tjevents.transforms import GridSampling
+from tjevents.transforms import EventGridSampling
 
 
 class E2GDataset(Dataset):
@@ -41,7 +41,7 @@ class E2GDataset(Dataset):
             label = ord(raw_path.split("/")[-1][0]) - 96
 
             graph = Data(x=events[:, 3].view(-1, 1), y=label, pos=events[:, 0:3])
-            grid_sampling = GridSampling(size=[16, 16, 16])
+            grid_sampling = EventGridSampling(size=[16, 16, 16])
             grid_sampling(graph)
             graph.edge_index = radius_graph(graph.pos, 9)
 

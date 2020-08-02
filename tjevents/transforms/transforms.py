@@ -108,8 +108,8 @@ class VoxelGridPreprocess(object):
         return voxel_grid
 
 
-class GridSampling(object):
-    r"""Clusters points into voxels with size :attr:`size`.
+class EventGridSampling(object):
+    """Clusters points into voxels with size :attr:`size`. Modified from the `torch_geometric.transforms.GridSampling`
 
     Args:
         size (float or [float] or Tensor): Size of a voxel (in each dimension).
@@ -122,10 +122,11 @@ class GridSampling(object):
             maximum coordinates found in :obj:`data.pos`.
             (default: :obj:`None`)
     """
-    def __init__(self, size, start=None, end=None):
+    def __init__(self, size, start=None, end=None, keep_pol=True):
         self.size = size
         self.start = start
         self.end = end
+        self.keep_pol = keep_pol
 
     def __call__(self, data):
         num_nodes = data.num_nodes
@@ -150,7 +151,7 @@ class GridSampling(object):
                     data[key] = item.argmax(dim=-1)
                 elif key == 'batch':
                     data[key] = item[perm]
-                elif key == 'x':
+                elif key == 'x' and self.keep_pol:
                     data[key] = item[perm]
                 else:
                     data[key] = scatter_mean(item, cluster, dim=0)
