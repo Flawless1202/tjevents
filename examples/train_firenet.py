@@ -1,12 +1,8 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import random_split
 from torchvision.transforms import Compose
 from torch import optim
 from torch_geometric.data import DataLoader
-import torch_geometric.transforms as T
-from lpips_pytorch import lpips
+from lpips_pytorch import LPIPS
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -15,7 +11,7 @@ from pytorch_lightning.profiler import AdvancedProfiler
 from tjevents.datasets import EventImageDataset
 from tjevents.transforms import Event2VoxelGrid, VoxelGridPreprocess, ImageNormal, Pad
 from tjevents.nn.models import FireNet
-from tjevents.utils import parse_args
+from tjevents.utils import parse_args, show_results
 from tjevents.utils.types import as_easy_dict
 
 
@@ -30,6 +26,7 @@ class LightningFireNet(pl.LightningModule):
         self.train_args = as_easy_dict(args.train)
 
         self.model = FireNet(self.model_args)
+        self.loss = LPIPS("alex", "0.1")
 
     def forward(self, events, pre_states):
         return self.model(events, pre_states)
@@ -46,8 +43,7 @@ class LightningFireNet(pl.LightningModule):
 
             out, state = self(event, state)
 
-            loss += torch.mean(lpips(out.repeat([1, 3, 1, 1]), img.unsqueeze(1).repeat([1, 3, 1, 1]),
-                                     net_type="alex", version="0.1"))
+            loss += torch.mean(self.loss(out.repeat([1, 3, 1, 1]), img.unsqueeze(1).repeat([1, 3, 1, 1])))
 
         logs = {"train_loss": loss}
         return {"loss": loss, "log": logs}
@@ -64,8 +60,7 @@ class LightningFireNet(pl.LightningModule):
 
             out, state = self(event, state)
 
-            loss += torch.mean(lpips(out.repeat([1, 3, 1, 1]), img.unsqueeze(1).repeat([1, 3, 1, 1]),
-                                     net_type="alex", version="0.1"))
+            loss += torch.mean(self.loss(out.repeat([1, 3, 1, 1]), img.unsqueeze(1).repeat([1, 3, 1, 1])))
 
         return {"val_loss": loss}
 
@@ -73,6 +68,21 @@ class LightningFireNet(pl.LightningModule):
         avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
         logs = {"val_loss": avg_loss}
         return {"avg_val_loss": avg_loss, "log": logs}
+
+    def test_step(self, batch, batch_idx):
+        events, imgs = batch
+        state = None
+
+        for seq in range(events.size()[1]):
+            event = events[:, seq, ...]
+            img = imgs[:, seq, ...]
+
+            out, state = self(event, state)
+
+            rec_img = (out[0][0] * 255).byte().cpu()
+            show_img = (img[0] * 255).byte().cpu()
+
+            show_results(event.cpu(), rec_img)
 
     def prepare_data(self):
         event_transform = Compose([
@@ -86,10 +96,11 @@ class LightningFireNet(pl.LightningModule):
             # Pad(self.dataset_args.width, self.dataset_args.height, self.dataset_args.size_divisor)
         ])
 
-        self.train_dataset = EventImageDataset(self.dataset_args.data_root, "val",
+        self.train_dataset = EventImageDataset(self.dataset_args.data_root, "train",
                                                event_transform=event_transform, img_transform=img_transform)
         self.val_dataset = EventImageDataset(self.dataset_args.data_root, "val",
                                              event_transform=event_transform, img_transform=img_transform)
+        self.test_dataset = EventImageDataset(self.dataset_args.data_root, "test", event_transform=event_transform)
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.train_args.batch_size,
@@ -99,10 +110,13 @@ class LightningFireNet(pl.LightningModule):
         return DataLoader(self.val_dataset, batch_size=self.train_args.batch_size,
                           num_workers=self.train_args.num_workers)
 
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=1, num_workers=self.train_args.num_workers)
+
     def configure_optimizers(self):
         optimizers = [optim.Adam(self.parameters(), lr=self.train_args.lr)]
         schedulers = [{
-            "scheduler": optim.lr_scheduler.ReduceLROnPlateau(optimizers[0], patience=3),
+            "scheduler": optim.lr_scheduler.ReduceLROnPlateau(optimizers[0], patience=6, threshold=1e-3),
             "monitor": 'avg_val_loss',
             "interval": "epoch",
             "frequency": 1
@@ -117,7 +131,7 @@ def main():
 
     checkpoint_callback = ModelCheckpoint(
         filepath=args.checkpoint_path,
-        save_top_k=3,
+        save_top_k=5,
         verbose=True,
         monitor='avg_val_loss',
         mode='min',
@@ -137,6 +151,7 @@ def main():
                          accumulate_grad_batches=model.train_args.batch_size_times)
 
     trainer.fit(model)
+    trainer.test()
 
 
 if __name__ == '__main__':
