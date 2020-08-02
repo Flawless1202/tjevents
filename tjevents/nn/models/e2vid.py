@@ -7,7 +7,7 @@ from .unet import RecurrentUNet
 class RecurrentE2VID(nn.Module):
 
     def __init__(self, args):
-        super(RecurrentE2VID, self).__init__(args)
+        super(RecurrentE2VID, self).__init__()
 
         self.unet = RecurrentUNet(args)
 

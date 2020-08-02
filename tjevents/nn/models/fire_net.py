@@ -7,7 +7,7 @@ from .unet import FireUNet
 class FireNet(nn.Module):
 
     def __init__(self, args):
-        super(FireNet, self).__init__(args)
+        super(FireNet, self).__init__()
 
         self.net = FireUNet(args)
 
