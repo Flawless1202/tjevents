@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from torchvision.transforms import Compose
 from torch import optim
 from torch_geometric.data import DataLoader
@@ -13,6 +14,7 @@ from tjevents.transforms import Event2VoxelGrid, VoxelGridPreprocess, ImageNorma
 from tjevents.nn.models import FireNet
 from tjevents.utils import parse_args, show_results
 from tjevents.utils.types import as_easy_dict
+from tjevents.ops.flow_warper import FlowNet, FlowWarper
 
 
 class LightningFireNet(pl.LightningModule):
@@ -26,7 +28,9 @@ class LightningFireNet(pl.LightningModule):
         self.train_args = as_easy_dict(args.train)
 
         self.model = FireNet(self.model_args)
-        self.loss = LPIPS("alex", "0.1")
+        self.lpips_loss = LPIPS("alex", "0.1")
+        self.flownet = FlowNet()
+        self.flow_warper = FlowWarper()
 
     def forward(self, events, pre_states):
         return self.model(events, pre_states)
@@ -35,7 +39,8 @@ class LightningFireNet(pl.LightningModule):
         events, imgs = train_batch
 
         state = None
-        loss = 0
+        lpips_loss = 0
+        st_loss = 0
 
         for seq in range(events.size()[1]):
             event = events[:, seq, ...]
@@ -43,16 +48,29 @@ class LightningFireNet(pl.LightningModule):
 
             out, state = self(event, state)
 
-            loss += torch.mean(self.loss(out.repeat([1, 3, 1, 1]), img.unsqueeze(1).repeat([1, 3, 1, 1])))
+            lpips_loss += self.lpips_loss(out.repeat([1, 3, 1, 1]), img.unsqueeze(1).repeat([1, 3, 1, 1]))
 
-        logs = {"train_loss": loss}
+            if seq >= 10:
+                flow_img = img.detach().unsqueeze(1).repeat([1, 3, 1, 1])
+                flow_last_img = last_img.detach().unsqueeze(1).repeat([1, 3, 1, 1])
+                flow = self.flownet(flow_img, flow_last_img).detach()
+
+                noc_mask = torch.exp(- 50 * torch.sum(self.flow_warper(last_img.unsqueeze(1), flow) - img.unsqueeze(1), dim=1).pow(2)).unsqueeze(1)
+                st_loss += 2 * F.smooth_l1_loss(noc_mask * self.flow_warper(last_out, flow), noc_mask * out) * 255.
+
+            last_img = img.detach()
+            last_out = out.detach()
+
+        loss = lpips_loss + st_loss
+        logs = {"lpips_loss": lpips_loss, "st_loss": st_loss}
         return {"loss": loss, "log": logs}
 
     def validation_step(self, valid_batch, batch_idx):
         events, imgs = valid_batch
 
         state = None
-        loss = 0
+        lpips_loss = 0
+        st_loss = 0
 
         for seq in range(events.size()[1]):
             event = events[:, seq, ...]
@@ -60,9 +78,22 @@ class LightningFireNet(pl.LightningModule):
 
             out, state = self(event, state)
 
-            loss += torch.mean(self.loss(out.repeat([1, 3, 1, 1]), img.unsqueeze(1).repeat([1, 3, 1, 1])))
+            lpips_loss += self.lpips_loss(out.repeat([1, 3, 1, 1]), img.unsqueeze(1).repeat([1, 3, 1, 1]))
 
-        return {"val_loss": loss}
+            if seq >= 10:
+                flow_img = img.detach().unsqueeze(1).repeat([1, 3, 1, 1])
+                flow_last_img = last_img.detach().unsqueeze(1).repeat([1, 3, 1, 1])
+                flow = self.flownet(flow_img, flow_last_img).detach()
+
+                noc_mask = torch.exp(- 50 * torch.sum(self.flow_warper(last_img.unsqueeze(1), flow) - img.unsqueeze(1), dim=1).pow(2)).unsqueeze(1)
+                st_loss += 2 * F.smooth_l1_loss(noc_mask * self.flow_warper(last_out, flow), noc_mask * out) * 255.
+
+            last_img = img.detach()
+            last_out = out.detach()
+
+        loss = lpips_loss + st_loss
+        logs = {"val_lpips_loss": lpips_loss, "val_st_loss": st_loss}
+        return {"val_loss": loss, "log": logs}
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
@@ -88,12 +119,12 @@ class LightningFireNet(pl.LightningModule):
         event_transform = Compose([
             Event2VoxelGrid(self.dataset_args.num_bins, self.dataset_args.width, self.dataset_args.height),
             VoxelGridPreprocess(self.dataset_args.if_normalize, self.dataset_args.flip),
-            # Pad(self.dataset_args.width, self.dataset_args.height, self.dataset_args.size_divisor)
+            Pad(self.dataset_args.width, self.dataset_args.height, self.dataset_args.size_divisor)
         ])
 
         img_transform = Compose([
             ImageNormal(),
-            # Pad(self.dataset_args.width, self.dataset_args.height, self.dataset_args.size_divisor)
+            Pad(self.dataset_args.width, self.dataset_args.height, self.dataset_args.size_divisor)
         ])
 
         self.train_dataset = EventImageDataset(self.dataset_args.data_root, "train",
@@ -116,7 +147,7 @@ class LightningFireNet(pl.LightningModule):
     def configure_optimizers(self):
         optimizers = [optim.Adam(self.parameters(), lr=self.train_args.lr)]
         schedulers = [{
-            "scheduler": optim.lr_scheduler.ReduceLROnPlateau(optimizers[0], patience=6, threshold=1e-3),
+            "scheduler": optim.lr_scheduler.ReduceLROnPlateau(optimizers[0], patience=6, threshold=1e-2),
             "monitor": 'avg_val_loss',
             "interval": "epoch",
             "frequency": 1
