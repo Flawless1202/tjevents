@@ -15,10 +15,10 @@ class Pad(object):
         padded_height = self._get_padded_size(height, size_divisor)
         padded_width = self._get_padded_size(width, size_divisor)
         
-        padding_top = ceil((padded_height - height))
-        padding_bottom = padded_height - padding_top
-        padding_left = ceil((padded_width - width))
-        padding_right = padded_width - padding_left
+        padding_top = ceil((padded_height - height) / 2)
+        padding_bottom = padded_height - padding_top - height
+        padding_left = ceil((padded_width - width) / 2)
+        padding_right = padded_width - padding_left - width
 
         self.pad = nn.ConstantPad2d((padding_left, padding_right, padding_top, padding_bottom), 0)
 
